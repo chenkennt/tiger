@@ -1,0 +1,26 @@
+<?xml version = "1.0" encoding = "GB2312" ?>
+<project default = "build" basedir = ".">
+	<target name = "build">
+		<mkdir dir ="temp"/>
+		<javac srcdir = "src" destdir = "temp"/>
+		<jar file = "tigerc.jar" manifest = "Compile.MF">
+			<fileset dir = "temp">
+				<exclude name = "java_cup/*.*"/>
+				<exclude name = "JLex/*.*"/>
+				<exclude name = "main/Run.class"/>
+				<exclude name = "frame/virtualframe/VirtualMachine.class"/>
+				<exclude name = "frame/virtualframe/MemoryAccess.class"/>
+				<exclude name = "frame/virtualframe/TempList.class"/>
+			</fileset>
+		</jar>
+		<jar file = "tiger.jar" manifest = "Run.MF">
+			<fileset dir = "temp">
+				<include name = "main/Run.class"/>
+				<include name = "frame/virtualframe/VirtualMachine.class"/>
+				<include name = "frame/virtualframe/MemoryAccess.class"/>
+				<include name = "frame/virtualframe/TempList.class"/>
+			</fileset>
+		</jar>
+		<delete dir = "temp"/>
+	</target>
+</project>

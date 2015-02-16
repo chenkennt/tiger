@@ -1,0 +1,150 @@
+package Parse;
+
+import ErrorMsg.ErrorMsg;
+import Absyn.*;
+import Symbol.Symbol;
+
+parser code  {:
+	public void syntax_error(java_cup.runtime.Symbol current) {
+		report_error("Syntax error (" + current.sym + ")", current);
+	}
+
+	ErrorMsg errorMsg;
+
+	public void report_error(String message, java_cup.runtime.Symbol info) {
+		errorMsg.error(info.left, message);
+	}
+
+	public parser(java_cup.runtime.Scanner scanner, ErrorMsg err) {
+		this(scanner);
+		errorMsg=err;
+	}
+:};
+
+terminal String ID;		//标识符
+terminal String STRING;	//字符串常量
+terminal Integer INT;	//整型常量
+//标点
+terminal COMMA, COLON, SEMICOLON, LPAREN, RPAREN, LBRACK, RBRACK, LBRACE, RBRACE, DOT, PLUS, MINUS, TIMES, DIVIDE, EQ, NEQ, LT, LE, GT, GE, AND, OR, ASSIGN;
+terminal UMINUS;
+//保留字
+terminal ARRAY, IF, THEN, ELSE, WHILE, FOR, TO, DO,	LET, IN, END, OF, BREAK, NIL, FUNCTION, VAR, TYPE;
+
+non terminal Absyn program;
+non terminal Exp expr;
+non terminal ExpList exprlist, exprseq;
+non terminal FieldExpList fieldlist;
+non terminal Var lvalue, lvalue2, lvalue3, lvalue4;
+non terminal DecList declist;
+non terminal Dec dec, tydec, vardec, fundec;
+non terminal Ty ty;
+non terminal FieldList tyfields;
+
+precedence nonassoc ASSIGN;
+precedence left OR;
+precedence left AND;
+precedence nonassoc EQ, NEQ, LT, LE, GT, GE;
+precedence left PLUS, MINUS;
+precedence left TIMES, DIVIDE;
+precedence nonassoc UMINUS;
+
+start with program;
+
+//程序
+program ::= expr : e1 {: RESULT = e1; :};
+
+//声明
+declist ::= dec : e1 {: RESULT = new DecList(e1, null); :};
+declist ::= declist : e1 dec : e2 {: RESULT = DecList(e2, e1); :};
+dec ::= tydec : e1 {: RESULT = e1; :};
+dec ::= vardec : e1 {: RESULT = e1; :};
+dec ::= fundec : e1 {: RESULT = e1; :};
+tydec ::= TYPE : e1 ID : e2 EQ ty : e3 {: RESULT = new TypeDec(e1left, Symbol.symbol(e2), e3, null); :};
+ty ::= ID : e1 {: RESULT = new NameTy(e1left, Symbol.symbol(e1)); :};
+ty ::= LBRACE : e1 tyfields : e2 RBRACE {: RESULT = new RecordTy(e1left, e2); :};
+ty ::= LBRACE : e1 RBRACE {: RESULT = new RecordTy(e1left, null); :};
+ty ::= ARRAY : e1 OF ID : e2 {: RESULT = new ArrayTy(e1left,Symbol.symbol(e2)); :};
+tyfields ::= ID : e1 COLON ID : e2 {: RESULT = new FieldList(e1left, Symbol.symbol(e1), Symbol.symbol(e2), null); :};
+tyfields ::= tyfields : e1 COMMA ID : e2 COLON ID : e3
+	{: RESULT = new FieldList(e1left, Symbol.symbol(e2), Symbol.symbol(e3), e1); :};
+vardec ::= VAR : e1 ID : e2 ASSIGN expr : e3 {: RESULT = new VarDec(e1left, Symbol.symbol(e2), null, e3); :};
+vardec ::= VAR : e1 ID : e2 COLON ID : e3 ASSIGN expr : e4
+	{: RESULT = new VarDec(e1left, Symbol.symbol(e2), new NameTy(e3left, Symbol.symbol(e3)), e4); :};
+fundec ::= FUNCTION : e1 ID : e2 LPAREN tyfields : e3 RPAREN EQ expr : e4
+	{: RESULT = new FunctionDec(e1left, Symbol.symbol(e2), e3, null, e4); :};
+fundec ::= FUNCTION : e1 ID : e2 LPAREN tyfields : e3 RPAREN COLON ID : e4 EQ expr : e5
+	{: RESULT = new FunctionDec(e1left, Symbol.symbol(e2), e3, new NameTy(e4left, Symbol.symbol(e4)), e5); :};
+fundec ::= FUNCTION : e1 ID : e2 LPAREN RPAREN EQ expr : e3
+	{: RESULT = new FunctionDec(e1left, Symbol.symbol(e2), null, null, e3); :};
+fundec ::= FUNCTION : e1 ID : e2 LPAREN RPAREN COLON ID : e3 EQ expr : e4
+	{: RESULT = new FunctionDec(e1left, Symbol.symbol(e2), null, new NameTy(e3left, Symbol.symbol(e3)), e4); :};
+
+//表达式
+lvalue ::= ID : e1 {: RESULT = new SimpleVar(e1left, Symbol.symbol(e1)); :};
+lvalue ::= lvalue2 : e1 {: RESULT = e1 :};
+lvalue ::= lvalue4 : e1 {: RESULT = e1 :};
+lvalue2 ::= ID : e1 DOT ID : e2
+	{: RESULT = new FieldVar(e1left, new SimpleVar(e1left, Symbol.symbol(e1)), Symbol.symbol(e2)); :};
+lvalue2 ::= lvalue2 : e1 DOT ID : e2 {: RESULT = new FieldVar(e1left, e1, Symbol.symbol(e2)); :};
+lvalue2 ::= lvalue2 : e1 LBRACK expr : e2 RBRACK {: RESULT = new SubscriptVar(e1left, e1, e2); :};
+lvalue3 ::= ID : e1 LBRACK expr : e2 RBRACK
+	{:RESULT = new SubscriptVar(e1left, new SimpleVar(e1left, Symbol.symbol(e1)), e2); :};
+lvalue4 ::= lvalue3 : e1 {: RESULT = e1; :};
+lvalue4 ::= lvalue4 : e1 DOT ID : e2 {: RESULT = new FieldVar(e1left, e1, Symbol.symbol(e2)); :};
+lvalue4 ::= lvalue4 : e1 LBRACK expr : e2 RBRACK {: RESULT = new SubscriptVar(e1left, e1, e2); :};
+//基本
+expr ::= STRING : e1 {: RESULT = new StringExp(e1left, e1); :};
+expr ::= INT : e1 {: RESULT = new IntExp(e1left, e1.intValue()); :};
+expr ::= NIL : e1 {: RESULT = new NilExp(e1left); :};
+expr ::= lvalue : e1 {: RESULT = new VarExp(e1left, e1); :};
+//算术运算
+expr ::= MINUS : e1 expr : e2 {: RESULT = new OpExp(e1left, new IntExp(e2left, 0), OpExp.MINUS, e2); :} %prec UMINUS;
+expr ::= expr : e1 PLUS expr : e2 {: RESULT = new OpExp(e1left, e1, OpExp.PLUS, e2); :};
+expr ::= expr : e1 MINUS expr : e2 {: RESULT = new OpExp(e1left, e1, OpExp.MINUS, e2); :};
+expr ::= expr : e1 TIMES expr : e2 {: RESULT = new OpExp(e1left, e1, OpExp.MUL, e2); :};
+expr ::= expr : e1 DIVIDE expr : e2 {: RESULT = new OpExp(e1left, e1, OpExp.DIV, e2); :};
+//比较
+expr ::= expr : e1 EQ expr : e2 {: RESULT = new OpExp(e1left, e1, OpExp.EQ, e2); :};
+expr ::= expr : e1 NEQ expr : e2 {: RESULT = new OpExp(e1left, e1, OpExp.NEQ, e2); :};
+expr ::= expr : e1 LT expr : e2 {: RESULT = new OpExp(e1left, e1, OpExp.LT, e2); :};
+expr ::= expr : e1 LE expr : e2 {: RESULT = new OpExp(e1left, e1, OpExp.LE, e2); :};
+expr ::= expr : e1 GT expr : e2 {: RESULT = new OpExp(e1left, e1, OpExp.GT, e2); :};
+expr ::= expr : e1 GE expr : e2 {: RESULT = new OpExp(e1left, e1, OpExp.GE, e2); :};
+//布尔运算
+expr ::= expr : e1 AND expr : e2 {: RESULT = new IfExp(e1left, e1, e2, new IntExp(e2left, 0)); :};
+expr ::= expr : e1 OR expr : e2 {: RESULT = new IfExp(e1left, e1, new IntExp(e1left, 1), e2); :};
+//赋值
+expr ::= lvalue : e1 ASSIGN expr : e2 {: RESULT = new AssignExp(e1left, e1, e2); :};
+//函数调用
+expr ::= ID : e1 LPAREN exprlist : e2 RPAREN {: RESULT = new CallExp(e1left, Symbol.symbol(e1), e2); :};
+expr ::= ID : e1 LPAREN RPAREN  {: RESULT = new CallExp(e1left, Symbol.symbol(e1), null); :};
+//序列
+expr ::= LPAREN : e1 exprseq : e2 RPAREN {: RESULT = new SeqExp(e1left, e2); :};
+expr ::= LPAREN : e1 RPAREN  {: RESULT = new SeqExp(e1left, null); :};
+//创建结构
+expr ::= ID : e1 LBRACE fieldlist : e2 RBRACE {: RESULT = new RecordExp(e1left, Symbol.symbol(e1), e2); :};
+expr ::= ID : e1 LBRACE RBRACE {: RESULT = new RecordExp(e1left, Symbol.symbol(e1), null); :};
+//创建数组
+expr ::= ID : e1 LBRACK expr : e2 RBRACK OF expr : e3 {: RESULT = new ArrayExp(e1left, Symbol.symbol(e1), e2, e3); :};
+//if语句
+expr ::= IF : e1 expr : e2 THEN expr : e3 {: RESULT = new IfExp(e1left, e2, e3); :};
+expr ::= IF : e1 expr : e2 THEN expr : e3 ELSE expr : e4 {: RESULT = new IfExp(e1left, e2, e3, e4); :};
+//for语句
+expr ::= FOR : e1 ID : e2 ASSIGN expr : e3 TO expr : e4 DO expr : e5
+	{: RESULT = new ForExp(e1left, new VarDec(e2left, Symbol.symbol(e2), new NameTy(e2left, Symbol.symbol("int")), e3), e4, e5); :};
+//while语句
+expr ::= WHILE : e1 expr : e2 DO expr : e3 {: RESULT = new WhileExp(e1left, e2, e3); :};
+//break语句
+expr ::= BREAK : e1 {: RESULT = new BreakExp(e1left); :};
+//let..in语句
+expr ::= LET : e1 declist : e2 IN exprseq : e3 END {: RESULT = new LetExp(e1left, e2, new SeqExp(e3left, e3)); :};
+expr ::= LET : e1 declist : e2 IN END {: RESULT = new LetExp(e1left, e2, null); :};
+//exprseq
+exprseq ::= expr : e1 {: RESULT = new ExpList(e1, null); :};
+exprseq ::= exprseq : e1 SEMICOLON expr : e2 {: RESULT = new ExpList(e2, e1); :};
+//exprlist
+exprlist ::= expr : e1 {: RESULT = new ExpList(e1, null); :};
+exprlist ::= exprlist : e1 COMMA expr : e2 {: RESULT = new ExpList(e2, e1); :};
+//fieldlist
+fieldlist ::= ID : e1 EQ expr : e2 {: RESULT = new FieldExpList(e1left, Symbol.symbol(e1), e2, null); :};
+fieldlist ::= fieldlist : e1 COMMA ID : e2 EQ expr : e3 {: RESULT = new FieldExpList(e1left, Symbol.symbol(e2), e3, e1); :};

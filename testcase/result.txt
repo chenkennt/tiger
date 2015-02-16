@@ -1,0 +1,57 @@
+			expected-result	type-checking		type-checking		type-checking
+							(without recursive)	(with recursive,	(with recursive,
+												no break check,		break check, loop var check)
+												no loop var check)
+merge.tig	correct			fail				pass
+queens.tig	correct			fail				pass
+test1.tig	correct			pass				pass
+test2.tig	correct			pass				pass
+test3.tig	correct			pass				pass
+test4.tig	correct			fail				pass
+test5.tig	correct			fail				pass
+test6.tig	correct			fail				pass
+test7.tig	correct			fail				pass
+test8.tig	correct			pass				pass
+test9.tig	incomp_type		pass				pass
+test10.tig	must_no_value	pass				pass
+test11.tig	must_int		pass				pass
+			cannot_assign	fail				fail				pass
+test12.tig	correct			pass				pass
+test13.tig	must_int		pass				pass
+test14.tig	incomp_type		pass				pass
+test15.tig	must_no_value	pass				pass
+test16.tig	loop_dec		fail				pass
+test17.tig	undec_type		fail				pass
+test18.tig	undec_id		fail				pass
+test19.tig	undec_id		fail				pass
+test20.tig	undec_id		pass				pass
+test21.tig	must_int		fail				pass
+			incomp_type		fail				pass
+test22.tig	field_inconsist	pass				pass
+test23.tig	incomp_type		pass				pass
+test24.tig	not_array		pass				pass
+test25.tig	not_record		pass				pass
+test26.tig	must_int		pass				pass
+test27.tig	correct			pass				pass
+test28.tig	incomp_type		pass				pass
+test29.tig	incomp_type		pass				pass
+test30.tig	correct			pass				pass
+test31.tig	incomp_type		pass				pass
+test32.tig	incomp_type		pass				pass
+test33.tig	undec_type		pass				pass
+test34.tig	param_inconsist	pass				pass
+test35.tig	param_inconsist	pass				pass
+test36.tig	param_inconsist	pass				pass
+test37.tig  correct			pass				pass
+test38.tig	type_redec		fail				pass
+test39.tig	func_redec		fail				pass
+test40.tig	incomp_type		pass				pass
+test41.tig	correct			pass				pass
+test42.tig	correct			pass				pass
+test43.tig	incomp_type		pass				pass
+test44.tig	correct			pass				pass
+test45.tig	type_expect		pass				pass
+test46.tig  correct			pass				pass
+test47.tig	correct			pass				pass
+test48.tig	correct			pass				pass
+test49.tig	syntax error	pass				pass

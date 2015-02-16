@@ -1,0 +1,1 @@
+@java -jar tigerc.jar %1

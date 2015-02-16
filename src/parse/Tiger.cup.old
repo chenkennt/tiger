@@ -1,0 +1,78 @@
+package Parse;
+
+import ErrorMsg.ErrorMsg;
+
+parser code  {:
+	public void syntax_error(java_cup.runtime.Symbol current) {
+		report_error("Syntax error (" + current.sym + ")", current);
+	}
+
+	ErrorMsg errorMsg;
+
+	public void report_error(String message, java_cup.runtime.Symbol info) {
+		errorMsg.error(info.left, message);
+	}
+
+	public parser(java_cup.runtime.Scanner scanner, ErrorMsg err) {
+		this(scanner);
+		errorMsg=err;
+	}
+:};
+
+terminal String ID;		//标识符
+terminal String STRING;	//字符串常量
+terminal Integer INT;	//整型常量
+//标点
+terminal COMMA, COLON, SEMICOLON, LPAREN, RPAREN, LBRACK, RBRACK, LBRACE, RBRACE, DOT, PLUS, MINUS, TIMES, DIVIDE, EQ, NEQ, LT, LE, GT, GE, AND, OR, ASSIGN;
+terminal UMINUS;
+//保留字
+terminal ARRAY, IF, THEN, ELSE, WHILE, FOR, TO, DO,	LET, IN, END, OF, BREAK, NIL, FUNCTION, VAR, TYPE;
+
+non terminal program;
+non terminal expr, exprlist, exprseq, fieldlist, lvalue;
+non terminal declist, dec, tydec, vardec, fundec, ty, tyfields;
+
+precedence nonassoc ASSIGN;
+precedence left OR;
+precedence left AND;
+precedence nonassoc EQ, NEQ, LT, LE, GT, GE;
+precedence left PLUS, MINUS;
+precedence left TIMES, DIVIDE;
+precedence nonassoc UMINUS;
+
+start with program;
+
+//程序
+program ::= expr;
+
+//声明
+declist ::= dec | declist dec;
+dec ::= tydec | vardec | fundec;
+tydec ::= TYPE ID EQ ty;
+ty ::= ID | LBRACE tyfields RBRACE | LBRACE RBRACE | ARRAY OF ID;
+tyfields ::= ID COLON ID | tyfields COMMA ID COLON ID;
+vardec ::= VAR ID ASSIGN expr | VAR ID COLON ID ASSIGN expr;
+fundec ::=
+	FUNCTION ID LPAREN tyfields RPAREN EQ expr | FUNCTION ID LPAREN tyfields RPAREN COLON ID EQ expr |
+	FUNCTION ID LPAREN RPAREN EQ expr | FUNCTION ID LPAREN RPAREN COLON ID EQ expr;
+
+//表达式
+lvalue ::= ID | lvalue DOT ID | lvalue LBRACK expr RBRACK;
+expr ::=
+	STRING | INT | NIL | lvalue |																		//基本
+	MINUS expr %prec UMINUS | expr PLUS expr | expr MINUS expr | expr TIMES expr | expr DIVIDE expr |	//算术运算
+	expr EQ expr | expr NEQ expr | expr LT expr | expr LE expr | expr GT expr | expr GE expr |			//比较
+	expr AND expr | expr OR expr |																		//布尔运算
+	lvalue ASSIGN expr |																				//赋值
+	ID LPAREN exprlist RPAREN | ID LPAREN RPAREN |														//函数调用
+	LPAREN exprseq RPAREN | LPAREN RPAREN |																//序列
+	ID LBRACE fieldlist RBRACE | ID LBRACE RBRACE |														//创建结构
+	ID LBRACK expr RBRACK OF expr |																		//创建数组
+	IF expr THEN expr | IF expr THEN expr ELSE expr	|													//if语句
+	FOR ID ASSIGN expr TO expr DO expr |																//for语句
+	WHILE expr DO expr |																				//while语句
+	BREAK |																								//break语句
+	LET declist IN exprseq END | LET declist IN END;														//let..in语句
+exprseq ::= expr | exprseq SEMICOLON expr;
+exprlist ::= expr | exprlist COMMA expr;
+fieldlist ::= ID EQ expr | fieldlist COMMA ID EQ expr;
